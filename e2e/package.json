@@ -1,0 +1,9 @@
+{
+  "name": "pharma-rush-e2e",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@sparticuz/chromium": "^138.0.0",
+    "puppeteer-core": "^24.0.0"
+  }
+}
