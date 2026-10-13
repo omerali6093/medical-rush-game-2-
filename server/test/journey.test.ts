@@ -26,7 +26,7 @@ class Client {
 }
 const signup = async (name: string, email = `${name.toLowerCase()}@clinic.test`) => {
   const c = new Client();
-  const r = await c.post('/api/auth/signup', { email, password: 'Str0ngPass9', displayName: name, profession: 'doctor', acceptTerms: true });
+  const r = await c.post('/api/auth/signup', { email, password: 'Str0ngPass9', displayName: name, phone: '01234567890', profession: 'doctor', acceptTerms: true });
   assert.equal(r.status, 201, JSON.stringify(r.json)); return c;
 };
 
@@ -68,13 +68,19 @@ after(async () => { server.close(); await mongoose.connection.dropDatabase(); aw
 
 const S: any = {};
 test('auth: validation, signup, duplicate, login, logout, /me, protected routes', async () => {
-  const bad = await new Client().post('/api/auth/signup', { email: 'x@y.test', password: 'short', displayName: 'Dr X', profession: 'doctor', acceptTerms: true });
+  const bad = await new Client().post('/api/auth/signup', { email: 'x@y.test', password: 'short', displayName: 'Dr X', phone: '01234567890', profession: 'doctor', acceptTerms: true });
   assert.equal(bad.status, 400);
-  const noTerms = await new Client().post('/api/auth/signup', { email: 'x@y.test', password: 'Str0ngPass9', displayName: 'Dr X', profession: 'doctor', acceptTerms: false }); assert.equal(noTerms.status, 400);
+  const validSignup = { email: 'x@y.test', password: 'Str0ngPass9', displayName: 'Dr X', profession: 'doctor', acceptTerms: true };
+  assert.equal((await new Client().post('/api/auth/signup', { ...validSignup, phone: '1234567890a' })).status, 400);
+  assert.equal((await new Client().post('/api/auth/signup', { ...validSignup, phone: '123456789012' })).status, 400);
+  assert.equal((await new Client().post('/api/auth/signup', { ...validSignup, phone: 12345678901 })).status, 400);
+  assert.equal((await new Client().post('/api/auth/signup', validSignup)).status, 400);
+  const noTerms = await new Client().post('/api/auth/signup', { ...validSignup, phone: '01234567890', acceptTerms: false }); assert.equal(noTerms.status, 400);
   S.amara = await signup('Amara'); S.amaraEmail = 'amara@clinic.test';
-  assert.equal((await new Client().post('/api/auth/signup', { email: 'amara@clinic.test', password: 'Str0ngPass9', displayName: 'Other', profession: 'doctor', acceptTerms: true })).status, 409);
+  assert.equal((await new Client().post('/api/auth/signup', { email: 'amara@clinic.test', password: 'Str0ngPass9', displayName: 'Other', phone: '12345678901', profession: 'doctor', acceptTerms: true })).status, 409);
   const me = await S.amara.get('/api/auth/me'); assert.equal(me.status, 200); assert.equal(me.json.user.email, 'amara@clinic.test'); assert.equal(me.json.progress.level, 1);
   assert.equal(JSON.stringify(me.json).includes('passwordHash'), false);
+  assert.equal((await User.findOne({ email: 'amara@clinic.test' })).phone, '01234567890');
   assert.equal((await new Client().get('/api/missions')).status, 401);
   assert.equal((await new Client().post('/api/game-sessions/start', {})).status, 401);
   const noHeader = await fetch(base + '/api/auth/logout', { method: 'POST' }); assert.equal(noHeader.status, 403, 'CSRF header required');
