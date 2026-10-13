@@ -21,6 +21,7 @@ const userSchema = new Schema(
     passwordHash: { type: String, required: true },
     displayName: { type: String, required: true, trim: true },
     displayNameLower: { type: String, required: true, unique: true },
+    phone: { type: String },
     profession: { type: String, enum: PROFESSIONS, default: 'doctor' },
     role: { type: String, enum: ROLES, default: 'player' },
     /** Organization this user administers (org_admin). */

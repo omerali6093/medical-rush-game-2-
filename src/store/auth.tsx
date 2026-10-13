@@ -18,6 +18,7 @@ interface Ctx {
     email: string
     password: string
     displayName: string
+    phone: string
     profession: string
     acceptTerms: boolean
   }) => Promise<void>

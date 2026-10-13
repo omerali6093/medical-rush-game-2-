@@ -27,6 +27,7 @@ export default function AuthScreen ({
     email: '',
     password: '',
     displayName: '',
+    phone: '',
     profession: 'doctor',
     accept: false,
     token: ''
@@ -56,6 +57,7 @@ export default function AuthScreen ({
           email: f.email,
           password: f.password,
           displayName: f.displayName,
+          phone: f.phone,
           profession: f.profession,
           acceptTerms: f.accept
         })
@@ -103,6 +105,24 @@ export default function AuthScreen ({
             onChange={set('displayName')}
             maxLength={30}
             autoComplete='nickname'
+            required
+          />
+        )}
+        {mode === 'signup' && (
+          <Input
+            label='Phone number (up to 11 digits)'
+            type='text'
+            inputMode='numeric'
+            value={f.phone}
+            onChange={e =>
+              setF(p => ({
+                ...p,
+                phone: e.target.value.replace(/\D/g, '').slice(0, 11)
+              }))
+            }
+            maxLength={11}
+            pattern='[0-9]{1,11}'
+            autoComplete='tel'
             required
           />
         )}

@@ -49,6 +49,9 @@ router.post(
           .min(2)
           .max(30)
           .regex(/^[\p{L}\p{N} ._-]+$/u, 'Display name has invalid characters'),
+        phone: z
+          .string()
+          .regex(/^\d{1,11}$/, 'Phone number must contain 1 to 11 digits'),
         profession: z.enum(PROFESSIONS),
         acceptTerms: z.literal(true, {
           message: 'You must accept the privacy notice and terms'
@@ -70,6 +73,7 @@ router.post(
       passwordHash: await bcrypt.hash(b.password, 11),
       displayName: b.displayName,
       displayNameLower: b.displayName.toLowerCase(),
+      phone: b.phone,
       profession: b.profession
     })
     const progress = await ensureProgress(user._id)
