@@ -13,6 +13,7 @@ export interface Doctor {
   armL: THREE.Group
   armR: THREE.Group
   aura: THREE.Mesh
+  parts: THREE.Object3D[]
   shadow: THREE.Mesh
 }
 
@@ -83,7 +84,8 @@ export function createDoctor (S: THREE.Scene): Doctor {
   shadow.rotation.x = -Math.PI / 2
   shadow.position.y = 0.04
   S.add(shadow)
-  return { group, body, band, cap, legL, legR, armL, armR, aura, shadow }
+  return { group, body, band, cap, legL, legR, armL, armR, aura, shadow, 
+    parts: [body, band, head, cap, visor, cross, cross2, legL, legR, armL, armR] }
 }
 
 export function applySkin (d: Doctor, s: Skin) {

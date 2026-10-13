@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { loadDoctorModel, type ModelDoctor, type Pose } from "./doctorModel"
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import type { HudState, Skin } from '../types'
 import type { Brand } from '../api/types'
 import {
@@ -31,6 +33,10 @@ interface Ent {
   m: THREE.Object3D
 }
 const LANES = [-2, 0, 2]
+const DOCTOR_MODEL = { url: `${import.meta.env.BASE_URL}models/doctor.glb`, 
+height: 2.2, facing: Math.PI};
+console.log("Doctor Model =>", DOCTOR_MODEL);
+
 const fresh = () => ({
   lane: 1,
   x: 0,
@@ -70,6 +76,8 @@ export class GameEngine {
   /** Single source of truth for timer, health, objective, quizzes and win/loss (shared/mission.ts). */
   private machine: MissionMachine | null = null
   private brand: BrandAssets | null = null
+  private model: ModelDoctor | null = null
+  private skin: Skin | null = null
   private pendingEnd: RunSummary | null = null
   private tm = 0
   private shake = 0
@@ -107,11 +115,29 @@ export class GameEngine {
     this.resize()
     this.bindInput()
     this.raf = requestAnimationFrame(this.loop)
+    void this.loadModel()
+  }
+
+  /** Loads public/models/doctor.glb. On failure the built-in box doctor stays. */
+  private async loadModel () {
+    try {
+      const m = await loadDoctorModel(DOCTOR_MODEL)
+      this.d.parts.forEach(p => {
+        p.visible = false // hide the box doctor, keep shadow + shield aura
+      })
+      this.d.group.add(m.root)
+      this.model = m
+      if (this.skin) m.tint(this.skin)
+    } catch (e) {
+      console.warn('Doctor GLB not loaded, using the built-in character:', e)
+    }
   }
 
   /* ---------- public API ---------- */
   setSkin (s: Skin) {
-    applySkin(this.d, s)
+    applySkin(this.d, s);
+    this.skin = s;
+    this.model?.tint(s);
   }
   toIdle () {
     this.reset()
@@ -177,6 +203,7 @@ export class GameEngine {
     cancelAnimationFrame(this.raf)
     this.cleanup.forEach(f => f())
     this.R.dispose()
+    this.model?.dispose();
   }
 
   /* ---------- internals ---------- */
@@ -503,18 +530,35 @@ export class GameEngine {
       air = y > 0.05,
       sw = air ? 0 : Math.sin(this.runT) * 0.95,
       k = 1 - Math.exp(-dt * 20)
-    d.legL.rotation.x += ((air ? -0.7 : sw) - d.legL.rotation.x) * k
-    d.legR.rotation.x += ((air ? 0.5 : -sw) - d.legR.rotation.x) * k
-    d.armL.rotation.x += ((air ? -2.4 : -sw) - d.armL.rotation.x) * k
-    d.armR.rotation.x += ((air ? -2.4 : sw) - d.armR.rotation.x) * k
+    const mdl = this.model
+    if (mdl) {
+      // GLB character: animation clips drive the limbs
+      const pose: Pose = air
+        ? 'jump'
+        : sl
+        ? 'slide'
+        : this.mode === 'idle'
+        ? 'idle'
+        : 'run'
+      mdl.setPose(pose)
+      mdl.update(dt, s.speed, !live)
+    } else {
+      // built-in box character
+      d.legL.rotation.x += ((air ? -0.7 : sw) - d.legL.rotation.x) * k
+      d.legR.rotation.x += ((air ? 0.5 : -sw) - d.legR.rotation.x) * k
+      d.armL.rotation.x += ((air ? -2.4 : -sw) - d.armL.rotation.x) * k
+      d.armR.rotation.x += ((air ? -2.4 : sw) - d.armR.rotation.x) * k
+    }
     d.group.position.set(
       x,
       y +
-        (sl ? 0.15 : 0) +
-        (live && !air && !sl ? Math.abs(Math.sin(this.runT)) * 0.09 : 0),
+        (sl && !mdl ? 0.15 : 0) +
+        (!mdl && live && !air && !sl ? Math.abs(Math.sin(this.runT)) * 0.09 : 0),
       0
     )
-    d.group.rotation.x += ((sl ? -1.2 : 0.14) - d.group.rotation.x) * k
+    // lean forward when sliding (only if the model has no slide clip of its own)
+    d.group.rotation.x +=
+      ((sl && !mdl?.has.slide ? -1.2 : mdl ? 0 : 0.14) - d.group.rotation.x) * k
     d.group.rotation.z = (LANES[s.lane] - s.x) * 0.14
     d.group.visible = !(s.inv > 0 && Math.floor(tm * 20) % 2 === 0)
     d.aura.visible = s.shield
