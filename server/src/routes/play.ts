@@ -51,7 +51,8 @@ router.get(
   '/missions',
   wrap(async (req, res) => {
     const p: any = await ensureProgress(me(req)._id)
-    const ms: any[] = await Mission.find({ status: 'active' })
+    const worldFilter = req.query.world ? { world: String(req.query.world) } : {}
+    const ms: any[] = await Mission.find({ status: 'active', ...worldFilter })
       .sort({ level: 1 })
       .lean()
     res.json({
@@ -132,7 +133,8 @@ router.post(
     const plan = await pickQuizPlan(
       u._id,
       mission.difficulty,
-      mission.quizAt.length
+      mission.quizAt.length,
+      mission.world ?? 'Bloodstream'
     )
     const brand = await activeCampaign(mission.level)
     const session: any = await GameSession.create({

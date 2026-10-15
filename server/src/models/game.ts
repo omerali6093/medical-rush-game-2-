@@ -14,7 +14,7 @@ const missionSchema = new Schema(
       type: { type: String, default: 'collect' },
       target: { type: Number, required: true }
     },
-    quizAt: { type: [Number], default: [60, 120, 180] },
+    quizAt: { type: [Number], default: [30, 60, 90, 120, 150, 175] },
     quizSeconds: { type: Number, default: 12 },
     requireFinalQuiz: { type: Boolean, default: false },
     minStars: { type: Number, default: 1 },

@@ -74,10 +74,20 @@ export default function App () {
         )}
         {screen === 'auth' && <AuthScreen key='auth' go={g.go} />}
         {screen === 'worlds' && (
-          <Worlds key='worlds' go={g.go} xp={progress?.xp ?? 0} />
+          <Worlds
+            key='worlds'
+            go={g.go}
+            xp={progress?.xp ?? 0}
+            onSelectWorld={g.setSelectedWorld}
+          />
         )}
         {screen === 'missions' && (
-          <Missions key='missions' go={g.go} onPick={m => g.openBriefing(m)} />
+          <Missions
+            key='missions'
+            go={g.go}
+            onPick={m => g.openBriefing(m)}
+            worldId={g.selectedWorld}
+          />
         )}
         {screen === 'briefing' && g.briefing && (
           <Briefing

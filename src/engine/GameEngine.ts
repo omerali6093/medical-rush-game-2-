@@ -9,8 +9,10 @@ import {
   type RunSummary
 } from '../../shared/mission'
 import { makeBrandAssets, type BrandAssets } from './brand'
-import { ZONES } from '../data/worlds'
+import { ZONES, type WorldId } from '../data/worlds'
 import { createWorld, placeRbc, POINT_COUNT, type World } from './world'
+import { createHeartWorld, placeHeartParticle, HEART_POINT_COUNT } from './worldHeart'
+import { createLungsWorld, placeLungsParticle, LUNGS_POINT_COUNT } from './worldLungs'
 import { applySkin, createDoctor, type Doctor } from './doctor'
 import { createEntity, type EntType } from './entities'
 import { Bursts } from './particles'
@@ -18,6 +20,34 @@ import { sfx } from './audio'
 
 export type Action = 'l' | 'r' | 'u' | 'd'
 type Mode = 'idle' | 'count' | 'run' | 'pause' | 'event' | 'over'
+
+/** Per-world scene config (fog, background, light colours, heartbeat pulse colour) */
+const WORLD_CONFIG: Record<WorldId, {
+  bg: number; fog: number; fogDensity: number
+  ambient: number; hemiSky: number; hemiGround: number
+  trackLight: number; fillLight: number
+  pulseColor: number; particleCount: number
+}> = {
+  Bloodstream: {
+    bg: 0x1c0510, fog: 0x3a0a18, fogDensity: 0.018,
+    ambient: 0xffc0cc, hemiSky: 0xffb0c0, hemiGround: 0x442030,
+    trackLight: 0x22e4ff, fillLight: 0xffffff,
+    pulseColor: 0xff9ab5, particleCount: POINT_COUNT
+  },
+  Heart: {
+    bg: 0x180006, fog: 0x3a0010, fogDensity: 0.020,
+    ambient: 0xff9090, hemiSky: 0xff6060, hemiGround: 0x331020,
+    trackLight: 0xff2255, fillLight: 0xffaaaa,
+    pulseColor: 0xff4466, particleCount: HEART_POINT_COUNT
+  },
+  Lungs: {
+    bg: 0x040c18, fog: 0x082040, fogDensity: 0.016,
+    ambient: 0x80c8ff, hemiSky: 0x60aaff, hemiGround: 0x102030,
+    trackLight: 0x00aaff, fillLight: 0xaaddff,
+    pulseColor: 0x44ccff, particleCount: LUNGS_POINT_COUNT
+  }
+}
+
 export interface EngineEvents {
   onHud(h: HudState): void
   onQuiz(index: number): void
@@ -76,12 +106,13 @@ export class GameEngine {
   private w: World
   private d: Doctor
   private fx: Bursts
-  private light = new THREE.PointLight(0x22e4ff, 2.4 * BRIGHTNESS, 20)
-  private fill = new THREE.PointLight(0xffffff, 2.6 * BRIGHTNESS, 16) // white light that follows the character
+  private light: THREE.PointLight
+  private fill: THREE.PointLight
   private envTex: THREE.Texture | null = null // environment map for the character only
   private ents: Ent[] = []
   private s = fresh()
   private mode: Mode = 'idle'
+  private worldId: WorldId = 'Bloodstream'
   /** Single source of truth for timer, health, objective, quizzes and win/loss (shared/mission.ts). */
   private machine: MissionMachine | null = null
   private brand: BrandAssets | null = null
@@ -120,16 +151,20 @@ export class GameEngine {
     this.envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     pmrem.dispose()
 
-    this.S.background = new THREE.Color(0x1c0510)
-    this.S.fog = new THREE.FogExp2(0x3a0a18, 0.018) // thinner fog = brighter, more colourful distance
+    const wc = WORLD_CONFIG['Bloodstream']
+    this.light = new THREE.PointLight(wc.trackLight, 2.4 * BRIGHTNESS, 20)
+    this.fill  = new THREE.PointLight(wc.fillLight,  2.6 * BRIGHTNESS, 16)
+
+    this.S.background = new THREE.Color(wc.bg)
+    this.S.fog = new THREE.FogExp2(wc.fog, wc.fogDensity)
     const dl = new THREE.DirectionalLight(0xffffff, 1.3 * BRIGHTNESS)
     dl.position.set(2, 8, 4)
     this.S.add(
-      new THREE.AmbientLight(0xffc0cc, 1.5 * BRIGHTNESS),
+      new THREE.AmbientLight(wc.ambient, 1.5 * BRIGHTNESS),
       dl,
       this.light,
       this.fill,
-      new THREE.HemisphereLight(0xffb0c0, 0x442030, 1.0 * BRIGHTNESS)
+      new THREE.HemisphereLight(wc.hemiSky, wc.hemiGround, 1.0 * BRIGHTNESS)
     )
     this.w = createWorld(this.S)
     this.d = createDoctor(this.S)
@@ -160,6 +195,31 @@ export class GameEngine {
   }
 
   /* ---------- public API ---------- */
+
+  /** Switch world scene. Call before start() — rebuilds the tunnel geometry and recolours the scene. */
+  setWorld (id: WorldId) {
+    if (this.worldId === id) return
+    this.worldId = id
+    // Tear down old world objects
+    this.w.tunnel.geometry.dispose()
+    ;(this.w.tunnel.material as THREE.MeshStandardMaterial).dispose()
+    this.w.rbcs.forEach(m => { this.S.remove(m); m.geometry.dispose() })
+    this.w.dashes.forEach(m => { this.S.remove(m) })
+    this.S.remove(this.w.tunnel)
+    this.S.remove(this.w.plat)
+    // Build new world
+    if (id === 'Heart') this.w = createHeartWorld(this.S)
+    else if (id === 'Lungs') this.w = createLungsWorld(this.S)
+    else this.w = createWorld(this.S)
+    // Re-apply scene colours
+    const wc = WORLD_CONFIG[id]
+    ;(this.S.background as THREE.Color).set(wc.bg)
+    ;(this.S.fog as THREE.FogExp2).color.set(wc.fog)
+    ;(this.S.fog as THREE.FogExp2).density = wc.fogDensity
+    this.light.color.set(wc.trackLight)
+    this.fill.color.set(wc.fillLight)
+  }
+
   setSkin (s: Skin) {
     applySkin(this.d, s)
     this.skin = s
@@ -457,8 +517,9 @@ export class GameEngine {
       }
     }
     if (s.dist >= s.ms) {
+      const zones = ZONES[this.worldId]
       this.ev.onBanner(
-        `${s.ms} m · ENTERING ${ZONES[(s.ms / 500 - 1) % ZONES.length]}`
+        `${s.ms} m · ENTERING ${zones[(s.ms / 500 - 1) % zones.length]}`
       )
       s.ms += 500
     }
@@ -519,17 +580,23 @@ export class GameEngine {
     const w = this.w,
       d = this.d,
       s = this.s,
-      tm = this.tm
+      tm = this.tm,
+      wc = WORLD_CONFIG[this.worldId],
+      pc = wc.particleCount
     w.rbcs.forEach(m => {
       m.position.z += dz * 0.9
       m.rotation.x += dt * 0.5
-      if (m.position.z > 8) placeRbc(m, -125)
+      if (m.position.z > 8) {
+        if (this.worldId === 'Heart') placeHeartParticle(m, -125)
+        else if (this.worldId === 'Lungs') placeLungsParticle(m, -125)
+        else placeRbc(m, -125)
+      }
     })
     w.dashes.forEach(m => {
       m.position.z += dz
       if (m.position.z > 6) m.position.z -= 168
     })
-    for (let i = 0; i < POINT_COUNT; i++) {
+    for (let i = 0; i < pc; i++) {
       w.pa[i * 3 + 2] += dz * 1.1
       if (w.pa[i * 3 + 2] > 8) w.pa[i * 3 + 2] = -125
     }
@@ -537,7 +604,7 @@ export class GameEngine {
     w.tunnel.rotation.z += dt * 0.02
     w.tex.offset.y -= (dz / 220) * 26
     const hb = Math.pow(Math.max(0, Math.sin(tm * 5.2)), 6)
-    ;(this.S.fog as THREE.FogExp2).density = 0.018 + hb * 0.004
+    ;(this.S.fog as THREE.FogExp2).density = wc.fogDensity + hb * 0.004
     this.light.intensity = (2.4 + hb * 0.9) * BRIGHTNESS
     w.tunnel.material.emissiveIntensity = 1.3 + hb * 1.3
     if (this.mode === 'run') {

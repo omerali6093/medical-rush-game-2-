@@ -1,24 +1,32 @@
 import { motion } from 'framer-motion'
 import type { MissionInfo } from '../../api/types'
 import type { Screen } from '../../types'
+import type { WorldId } from '../../data/worlds'
+import { WORLDS } from '../../data/worlds'
 import { Btn, Panel } from '../ui/motion'
 import { Notice, Stars, useLoad } from '../ui/forms'
 
 const DIFF = ['', 'Student', 'Resident', 'Specialist']
+
 export default function Missions ({
   go,
-  onPick
+  onPick,
+  worldId
 }: {
   go: (s: Screen) => void
   onPick: (m: MissionInfo) => void
+  worldId: WorldId
 }) {
+  const world = WORLDS.find(w => w.name === worldId) ?? WORLDS[0]
+
   const { data, error, loading } = useLoad<{
     missions: MissionInfo[]
     unlockedLevel: number
-  }>('/missions')
+  }>(`/missions?world=${encodeURIComponent(worldId)}`)
+
   return (
     <Panel id='missions' top>
-      <h2>🩸 Bloodstream missions</h2>
+      <h2>{world.icon} {world.name} missions</h2>
       {loading && <div className='pat'>Loading…</div>}
       {error && <Notice>{error}</Notice>}
       <div className='mlist'>
@@ -58,7 +66,7 @@ export default function Missions ({
           </motion.button>
         ))}
       </div>
-      <Btn className='btn ghost' onClick={() => go('home')}>
+      <Btn className='btn ghost' onClick={() => go('worlds')}>
         ← Back
       </Btn>
     </Panel>

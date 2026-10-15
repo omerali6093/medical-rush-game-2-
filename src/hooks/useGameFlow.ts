@@ -15,6 +15,7 @@ import { SKINS } from '../data/config'
 import { useProfile } from '../store/profile'
 import { useAuth } from '../store/auth'
 import type { HudState, Screen } from '../types'
+import type { WorldId } from '../data/worlds'
 
 export interface FloatText {
   id: number
@@ -81,6 +82,7 @@ export function useGameFlow (canvasRef: RefObject<HTMLCanvasElement>) {
   const [result, setResult] = useState<ResultState>({ status: 'saving' })
   const [startError, setStartError] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
+  const [selectedWorld, setSelectedWorld] = useState<WorldId>('Bloodstream')
   const engine = useRef<GameEngine | null>(null)
   const startingRef = useRef(false)
   const session = useRef<SessionStart | null>(null)
@@ -189,6 +191,8 @@ export function useGameFlow (canvasRef: RefObject<HTMLCanvasElement>) {
       try {
         const e = engine.current!
         e.toIdle()
+        // Apply world scene before the session starts
+        e.setWorld(selectedWorld)
         const s = await api<SessionStart>('/game-sessions/start', {
           body: { missionId: m.id, challengeId }
         })
@@ -214,7 +218,7 @@ export function useGameFlow (canvasRef: RefObject<HTMLCanvasElement>) {
         setStarting(false)
       }
     },
-    []
+    [selectedWorld]
   )
 
   const go = useCallback((s: Screen) => {
@@ -276,7 +280,9 @@ export function useGameFlow (canvasRef: RefObject<HTMLCanvasElement>) {
     togglePause,
     profile,
     patch,
-    setScreen
+    setScreen,
+    selectedWorld,
+    setSelectedWorld
   }
 }
 export { SHOP }

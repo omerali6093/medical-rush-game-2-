@@ -149,6 +149,6 @@ export function createWorld (S: THREE.Scene): World {
   )
   plat.rotation.x = -Math.PI / 2
   plat.position.y = 0.06
-  S.add(plat)
+  S.add(plat) 
   return { tunnel, tex, dashes, rbcs, points, pa, plat }
 }

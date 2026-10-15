@@ -1,4 +1,7 @@
 import type { WorldInfo } from '../types'
+
+export type WorldId = 'Bloodstream' | 'Heart' | 'Lungs'
+
 export const WORLDS: WorldInfo[] = [
   {
     name: 'Bloodstream',
@@ -20,34 +23,32 @@ export const WORLDS: WorldInfo[] = [
     gradient: 'linear-gradient(135deg,#1a3a6a,#4aa3ff)',
     specialty: 'Pulmonology',
     level: 3
-  },
-  {
-    name: 'Brain',
-    icon: '🧠',
-    gradient: 'linear-gradient(135deg,#3a1a6a,#b04dff)',
-    specialty: 'Neurology',
-    level: 4
-  },
-  {
-    name: 'Bones',
-    icon: '🦴',
-    gradient: 'linear-gradient(135deg,#4a4a5a,#d8d8e8)',
-    specialty: 'Orthopaedics',
-    level: 5
-  },
-  {
-    name: 'Cells',
-    icon: '🧬',
-    gradient: 'linear-gradient(135deg,#0a4a4a,#22e4ff)',
-    specialty: 'Cell Biology',
-    level: 6
   }
 ]
-export const ZONES = [
-  'VENA CAVA',
-  'RIGHT ATRIUM',
-  'HEART VALVE',
-  'PULMONARY ARTERY',
-  'CAPILLARY BED',
-  'ALVEOLI'
-]
+
+export const ZONES: Record<WorldId, string[]> = {
+  Bloodstream: [
+    'VENA CAVA',
+    'RIGHT ATRIUM',
+    'HEART VALVE',
+    'PULMONARY ARTERY',
+    'CAPILLARY BED',
+    'ALVEOLI'
+  ],
+  Heart: [
+    'SINOATRIAL NODE',
+    'RIGHT ATRIUM',
+    'TRICUSPID VALVE',
+    'RIGHT VENTRICLE',
+    'AORTIC VALVE',
+    'LEFT VENTRICLE'
+  ],
+  Lungs: [
+    'TRACHEA',
+    'PRIMARY BRONCHUS',
+    'SECONDARY BRONCHUS',
+    'BRONCHIOLES',
+    'ALVEOLAR DUCT',
+    'ALVEOLAR SAC'
+  ]
+}

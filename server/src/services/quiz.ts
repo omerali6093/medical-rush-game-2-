@@ -17,40 +17,58 @@ export function permutation (
   return arr // shown[k] = original option arr[k]
 }
 
-/** Picks `count` distinct approved questions at or below the mission difficulty, preferring ones the player has not seen recently. */
+/** World → preferred topic tags used to rank questions. */
+const WORLD_TOPICS: Record<string, string[]> = {
+  Bloodstream: ['haematology', 'pharmacology', 'toxicology', 'emergency'],
+  Heart:       ['cardiology', 'pharmacology', 'emergency'],
+  Lungs:       ['pulmonology', 'respiratory', 'critical care', 'emergency']
+}
+
+/**
+ * Picks `count` distinct approved questions at or below the mission difficulty,
+ * preferring:
+ *   1. Questions whose topics match the world (lower score = better)
+ *   2. Questions the player hasn't seen recently
+ *   3. Questions closest to the mission difficulty
+ */
 export async function pickQuizPlan (
   userId: unknown,
   difficulty: number,
-  count: number
+  count: number,
+  world = 'Bloodstream'
 ) {
   const pool: any[] = await QuizQuestion.find({
     status: 'approved',
     difficulty: { $lte: difficulty }
   })
-    .select('_id difficulty')
+    .select('_id difficulty topics')
     .lean()
+
   if (pool.length < count)
     throw new HttpError(
       503,
       'no_quiz_content',
       'Not enough approved quiz questions are available yet'
     )
+
   const recent = new Set(
     (
       await QuizAttempt.find({ user: userId })
         .sort({ createdAt: -1 })
-        .limit(25)
+        .limit(30)
         .select('question')
         .lean()
     ).map((a: any) => String(a.question))
   )
-  const scored = pool.map(q => ({
-    id: q._id,
-    k:
-      (recent.has(String(q._id)) ? 10 : 0) +
-      Math.abs(difficulty - q.difficulty) * 2 +
-      Math.random()
-  }))
+
+  const preferred = new Set(WORLD_TOPICS[world] ?? [])
+
+  const scored = pool.map(q => {
+    const topicMatch = (q.topics ?? []).some((t: string) => preferred.has(t)) ? 0 : 4
+    const recencyPenalty = recent.has(String(q._id)) ? 10 : 0
+    const diffPenalty = Math.abs(difficulty - q.difficulty) * 2
+    return { id: q._id, k: topicMatch + recencyPenalty + diffPenalty + Math.random() }
+  })
   scored.sort((a, b) => a.k - b.k)
   return scored.slice(0, count).map(s => s.id)
 }
