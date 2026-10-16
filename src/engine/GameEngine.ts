@@ -11,7 +11,7 @@ import {
 import { makeBrandAssets, type BrandAssets } from './brand'
 import { ZONES, type WorldId } from '../data/worlds'
 import { createWorld, placeRbc, POINT_COUNT, type World } from './world'
-import { createHeartWorld, placeHeartParticle, HEART_POINT_COUNT } from './worldHeart'
+import { createHeartWorld, placeHeartParticle, HEART_POINT_COUNT, type HeartWorld } from './worldHeart'
 import { createLungsWorld, placeLungsParticle, LUNGS_POINT_COUNT } from './worldLungs'
 import { applySkin, createDoctor, type Doctor } from './doctor'
 import { createEntity, type EntType } from './entities'
@@ -614,6 +614,66 @@ export class GameEngine {
       } else if (hb < 0.3) this.hbOn = false
     }
     this.fx.update(dt, dz)
+
+    // ── Heart world: animate interior anatomy elements ──────────────────────
+    if (this.worldId === 'Heart') {
+      const hw = this.w as HeartWorld
+      hw.phase = (hw.phase ?? 0) + dt
+
+      // Heartbeat pulse — 72 bpm = ~0.83 s period
+      const beat = Math.pow(Math.max(0, Math.sin(hw.phase * Math.PI * 2 / 0.83)), 8)
+
+      // Tunnel breathes with each beat (systolic squeeze)
+      const squeeze = 1 - beat * 0.04
+      hw.tunnel.scale.set(squeeze, squeeze, 1)
+
+      // Purkinje rings flash on each beat
+      hw.purkinjeRings?.forEach((r, i) => {
+        const mat = r.material as THREE.MeshBasicMaterial
+        const phase = (hw.phase - i * 0.04) * Math.PI * 2 / 0.83
+        const glow = Math.pow(Math.max(0, Math.sin(phase)), 10)
+        mat.opacity = 0.12 + glow * 0.65
+        r.position.z += dz
+        if (r.position.z > 8) r.position.z -= 220
+      })
+
+      // Valve leaflets open/close — flap on beat
+      hw.valveLeaflets?.forEach((v, i) => {
+        const phase = hw.phase * Math.PI * 2 / 0.83
+        v.rotation.x = 0.3 + Math.sin(phase) * 0.55
+        v.position.z += dz
+        if (v.position.z > 8) v.position.z -= 220
+      })
+
+      // Chordae tendineae sway gently
+      hw.chordae?.forEach((c, i) => {
+        c.rotation.z = Math.sin(hw.phase * 1.8 + i * 0.7) * 0.08
+        c.position.z += dz
+        if (c.position.z > 8) c.position.z -= 220
+      })
+
+      // Trabeculae scroll with world
+      hw.trabeculae?.forEach(t => {
+        t.position.z += dz
+        if (t.position.z > 8) t.position.z -= 210
+      })
+
+      // Papillary muscles scroll
+      hw.papillaryMuscles?.forEach(p => {
+        p.position.z += dz
+        if (p.position.z > 8) p.position.z -= 220
+      })
+
+      // Coronary vessels pulse brightness on beat
+      hw.coronaryVessels?.forEach(cv => {
+        const mat = cv.material as THREE.MeshBasicMaterial
+        mat.opacity = 0.4 + beat * 0.5
+      })
+
+      // Light pulses with heartbeat
+      this.light.intensity = (2.4 + beat * 2.0) * BRIGHTNESS
+      ;(this.S.fog as THREE.FogExp2).density = 0.020 + beat * 0.006
+    }
 
     const live =
       this.mode === 'run' || this.mode === 'idle' || this.mode === 'count'
