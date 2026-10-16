@@ -1,5 +1,12 @@
 # Pharma Rush — Race Through the Human Body
 
+# Tech using in it
+Frontend: React + Typescript, Vite, Three.js, Framer Motion, Custom CSS
+Backend: Nodejs & Express, Typescript, Mongodb.
+Login & Security: Bcrypt, Jsonwebtoke, helmet, Express-rate-limit, zod, dotenv
+
+<!-- # Pharma Rush — Race Through the Human Body
+
 Medical endless-runner for doctors, pharmacists and students. **React + TypeScript + Three.js + Framer Motion + custom CSS** frontend,
 **Node.js + Express + MongoDB** backend. The server is the source of truth for accounts, progress, rewards and rankings.
 
@@ -54,4 +61,4 @@ quiz content (draft → approved by a *different* reviewer), organizations/asset
 - Password-reset email is not wired to a provider (token is returned only outside production). No email verification / MFA / admin 2FA yet.
 - Reports are computed in memory (fine for MVP scale); add aggregation pipelines/indexes for large datasets. Challenge standings freeze lazily on first read or via admin "Finalize".
 - Tests ran against FerretDB (MongoDB-compatible) in the build sandbox; run `npm run server:test` once against real MongoDB. In-process locks complement MongoDB atomic updates for single-instance deployments.
-- Only the Bloodstream world is playable; other worlds remain "coming soon".
+- Only the Bloodstream world is playable; other worlds remain "coming soon". -->
