@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 export interface World {
+  group: THREE.Group
   tunnel: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
   tex: THREE.CanvasTexture
   dashes: THREE.Mesh[]
@@ -8,6 +9,7 @@ export interface World {
   points: THREE.BufferGeometry
   pa: Float32Array
   plat: THREE.Group
+  dispose: () => void
 }
 export const POINT_COUNT = 350
 
@@ -45,6 +47,9 @@ function veinTexture () {
 }
 
 export function createWorld (S: THREE.Scene): World {
+  const group = new THREE.Group()
+  S.add(group)
+
   const tg = new THREE.CylinderGeometry(9, 9, 220, 28, 24, true)
   tg.rotateX(Math.PI / 2)
   const tp = tg.attributes.position
@@ -64,7 +69,7 @@ export function createWorld (S: THREE.Scene): World {
     })
   )
   tunnel.position.set(0, 2, -90)
-  S.add(tunnel)
+  group.add(tunnel)
 
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(7, 220),
@@ -77,12 +82,12 @@ export function createWorld (S: THREE.Scene): World {
   )
   floor.rotation.x = -Math.PI / 2
   floor.position.set(0, 0, -90)
-  S.add(floor)
+  group.add(floor)
   const edgeM = new THREE.MeshBasicMaterial({ color: 0x22e4ff })
   ;[-3.5, 3.5].forEach(x => {
     const e = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 220), edgeM)
     e.position.set(x, 0.05, -90)
-    S.add(e)
+    group.add(e)
   })
 
   const dg = new THREE.BoxGeometry(0.06, 0.02, 1.6),
@@ -92,7 +97,7 @@ export function createWorld (S: THREE.Scene): World {
     for (let i = 0; i < 24; i++) {
       const d = new THREE.Mesh(dg, dm)
       d.position.set(x, 0.03, -i * 7)
-      S.add(d)
+      group.add(d)
       dashes.push(d)
     }
   })
@@ -108,7 +113,7 @@ export function createWorld (S: THREE.Scene): World {
     const m = new THREE.Mesh(rg, rm)
     m.scale.z = 0.5
     placeRbc(m, -Math.random() * 130)
-    S.add(m)
+    group.add(m)
     rbcs.push(m)
   }
 
@@ -120,17 +125,16 @@ export function createWorld (S: THREE.Scene): World {
     pa[i * 3 + 2] = -Math.random() * 130
   }
   points.setAttribute('position', new THREE.BufferAttribute(pa, 3))
-  S.add(
-    new THREE.Points(
-      points,
-      new THREE.PointsMaterial({
-        color: 0xff9ab5,
-        size: 0.12,
-        transparent: true,
-        opacity: 0.8
-      })
-    )
+  const pointsMesh = new THREE.Points(
+    points,
+    new THREE.PointsMaterial({
+      color: 0xff9ab5,
+      size: 0.12,
+      transparent: true,
+      opacity: 0.8
+    })
   )
+  group.add(pointsMesh)
 
   const plat = new THREE.Group()
   plat.add(
@@ -149,6 +153,22 @@ export function createWorld (S: THREE.Scene): World {
   )
   plat.rotation.x = -Math.PI / 2
   plat.position.y = 0.06
-  S.add(plat) 
-  return { tunnel, tex, dashes, rbcs, points, pa, plat }
+  group.add(plat)
+
+  const dispose = () => {
+    S.remove(group)
+    group.traverse(obj => {
+      if (obj instanceof THREE.Mesh || obj instanceof THREE.Points) {
+        obj.geometry?.dispose()
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose())
+        } else if (obj.material) {
+          obj.material.dispose()
+        }
+      }
+    })
+    tex.dispose()
+  }
+
+  return { group, tunnel, tex, dashes, rbcs, points, pa, plat, dispose }
 }

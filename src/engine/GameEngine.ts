@@ -12,7 +12,7 @@ import { makeBrandAssets, type BrandAssets } from './brand'
 import { ZONES, type WorldId } from '../data/worlds'
 import { createWorld, placeRbc, POINT_COUNT, type World } from './world'
 import { createHeartWorld, placeHeartParticle, HEART_POINT_COUNT, type HeartWorld } from './worldHeart'
-import { createLungsWorld, placeLungsParticle, LUNGS_POINT_COUNT } from './worldLungs'
+import { createLungsWorld, placeLungsParticle, LUNGS_POINT_COUNT, type LungsWorld } from './worldLungs'
 import { applySkin, createDoctor, type Doctor } from './doctor'
 import { createEntity, type EntType } from './entities'
 import { Bursts } from './particles'
@@ -108,6 +108,8 @@ export class GameEngine {
   private fx: Bursts
   private light: THREE.PointLight
   private fill: THREE.PointLight
+  private ambLight: THREE.AmbientLight
+  private hemiLight: THREE.HemisphereLight
   private envTex: THREE.Texture | null = null // environment map for the character only
   private ents: Ent[] = []
   private s = fresh()
@@ -154,17 +156,19 @@ export class GameEngine {
     const wc = WORLD_CONFIG['Bloodstream']
     this.light = new THREE.PointLight(wc.trackLight, 2.4 * BRIGHTNESS, 20)
     this.fill  = new THREE.PointLight(wc.fillLight,  2.6 * BRIGHTNESS, 16)
+    this.ambLight = new THREE.AmbientLight(wc.ambient, 1.5 * BRIGHTNESS)
+    this.hemiLight = new THREE.HemisphereLight(wc.hemiSky, wc.hemiGround, 1.0 * BRIGHTNESS)
 
     this.S.background = new THREE.Color(wc.bg)
     this.S.fog = new THREE.FogExp2(wc.fog, wc.fogDensity)
     const dl = new THREE.DirectionalLight(0xffffff, 1.3 * BRIGHTNESS)
     dl.position.set(2, 8, 4)
     this.S.add(
-      new THREE.AmbientLight(wc.ambient, 1.5 * BRIGHTNESS),
+      this.ambLight,
       dl,
       this.light,
       this.fill,
-      new THREE.HemisphereLight(wc.hemiSky, wc.hemiGround, 1.0 * BRIGHTNESS)
+      this.hemiLight
     )
     this.w = createWorld(this.S)
     this.d = createDoctor(this.S)
@@ -200,22 +204,20 @@ export class GameEngine {
   setWorld (id: WorldId) {
     if (this.worldId === id) return
     this.worldId = id
-    // Tear down old world objects
-    this.w.tunnel.geometry.dispose()
-    ;(this.w.tunnel.material as THREE.MeshStandardMaterial).dispose()
-    this.w.rbcs.forEach(m => { this.S.remove(m); m.geometry.dispose() })
-    this.w.dashes.forEach(m => { this.S.remove(m) })
-    this.S.remove(this.w.tunnel)
-    this.S.remove(this.w.plat)
+    // Fully tear down and dispose previous world objects and textures
+    this.w.dispose()
     // Build new world
     if (id === 'Heart') this.w = createHeartWorld(this.S)
     else if (id === 'Lungs') this.w = createLungsWorld(this.S)
     else this.w = createWorld(this.S)
-    // Re-apply scene colours
+    // Re-apply scene colours and all lights
     const wc = WORLD_CONFIG[id]
     ;(this.S.background as THREE.Color).set(wc.bg)
     ;(this.S.fog as THREE.FogExp2).color.set(wc.fog)
     ;(this.S.fog as THREE.FogExp2).density = wc.fogDensity
+    this.ambLight.color.set(wc.ambient)
+    this.hemiLight.color.set(wc.hemiSky)
+    this.hemiLight.groundColor.set(wc.hemiGround)
     this.light.color.set(wc.trackLight)
     this.fill.color.set(wc.fillLight)
   }
@@ -288,6 +290,7 @@ export class GameEngine {
   dispose () {
     cancelAnimationFrame(this.raf)
     this.cleanup.forEach(f => f())
+    this.w.dispose()
     this.R.dispose()
     this.envTex?.dispose()
     this.model?.dispose()
@@ -673,6 +676,31 @@ export class GameEngine {
       // Light pulses with heartbeat
       this.light.intensity = (2.4 + beat * 2.0) * BRIGHTNESS
       ;(this.S.fog as THREE.FogExp2).density = 0.020 + beat * 0.006
+    }
+
+    // ── Lungs world: animate airway respiratory breathing & cartilage ───────
+    if (this.worldId === 'Lungs') {
+      const lw = this.w as LungsWorld
+      lw.phase = (lw.phase ?? 0) + dt
+      // Respiratory cycle: ~16 breaths/min = ~3.75s per breath
+      const breath = Math.sin((lw.phase * Math.PI * 2) / 3.75)
+      // Airway gently dilates during inhalation, narrows slightly during exhalation
+      const expansion = 1 + breath * 0.025
+      lw.tunnel.scale.set(expansion, expansion, 1)
+
+      // Cartilage rings scroll and have a faint blue sheen
+      lw.cartilageRings?.forEach((r, i) => {
+        const mat = r.material as THREE.MeshStandardMaterial
+        mat.emissiveIntensity = 0.4 + Math.sin(lw.phase * 2 + i * 0.3) * 0.25
+        r.position.z += dz
+        if (r.position.z > 8) r.position.z -= 220
+      })
+
+      // Branching ports scroll
+      lw.branchingPorts?.forEach(p => {
+        p.position.z += dz
+        if (p.position.z > 8) p.position.z -= 220
+      })
     }
 
     const live =

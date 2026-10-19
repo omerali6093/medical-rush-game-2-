@@ -188,7 +188,7 @@ function safeWallPoint (): { x: number; y: number } {
  * Trabecula carnea — a muscular ridge arc on the chamber wall.
  * Placed strictly on left wall, right wall, or ceiling.
  */
-function makeTrabecula (S: THREE.Scene, z: number) {
+function makeTrabecula (group: THREE.Group, z: number) {
   const mat = new THREE.MeshStandardMaterial({
     color: 0x8b0015,
     emissive: 0x3a0008,
@@ -208,7 +208,7 @@ function makeTrabecula (S: THREE.Scene, z: number) {
     Math.random() * Math.PI
   )
   m.scale.setScalar(0.6 + Math.random() * 0.5)
-  S.add(m)
+  group.add(m)
   return m
 }
 
@@ -217,7 +217,7 @@ function makeTrabecula (S: THREE.Scene, z: number) {
  * downward. They never extend into the player lane (x stays > 4 or < -4 near the
  * bottom, and the bottom anchor is on the side wall, not the floor centre).
  */
-function makeChorda (S: THREE.Scene, z: number) {
+function makeChorda (group: THREE.Group, z: number) {
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffd0d0,
     emissive: 0x330000,
@@ -247,7 +247,7 @@ function makeChorda (S: THREE.Scene, z: number) {
   const geo = new THREE.TubeGeometry(curve, 14, 0.022 + Math.random() * 0.018, 5, false)
   const m = new THREE.Mesh(geo, mat)
   m.position.z = z
-  S.add(m)
+  group.add(m)
   return m
 }
 
@@ -255,7 +255,7 @@ function makeChorda (S: THREE.Scene, z: number) {
  * Valve leaflet — placed high up (y > 4.5), spanning across the ceiling arc.
  * Leaflets are in the ceiling/top region, well above the player.
  */
-function makeValveLeaflet (S: THREE.Scene, z: number, angle: number) {
+function makeValveLeaflet (group: THREE.Group, z: number, angle: number) {
   const mat = new THREE.MeshStandardMaterial({
     color: 0xf5c8c8,
     emissive: 0x220000,
@@ -276,7 +276,7 @@ function makeValveLeaflet (S: THREE.Scene, z: number, angle: number) {
   m.position.set(Math.cos(angle) * r, 5.5, z)
   m.rotation.y = angle + Math.PI * 0.5
   m.rotation.x = -0.2   // tilt slightly toward viewer (pointing downward)
-  S.add(m)
+  group.add(m)
   return m
 }
 
@@ -284,7 +284,7 @@ function makeValveLeaflet (S: THREE.Scene, z: number, angle: number) {
  * Papillary muscle — cone on the SIDE walls, not the floor centre.
  * Placed on left or right wall, growing inward (not upward from floor lane).
  */
-function makePapillaryMuscle (S: THREE.Scene, z: number) {
+function makePapillaryMuscle (group: THREE.Group, z: number) {
   const mat = new THREE.MeshStandardMaterial({
     color: 0x7a0012,
     emissive: 0x2a0008,
@@ -301,12 +301,12 @@ function makePapillaryMuscle (S: THREE.Scene, z: number) {
   m.position.set(wx, wy, z)
   // Rotate so cone points inward toward the lane (not upward)
   m.rotation.z = side * (-Math.PI * 0.5) + (Math.random() - 0.5) * 0.3
-  S.add(m)
+  group.add(m)
   return m
 }
 
 /** Coronary vessel — glowing tube running along the outer wall */
-function makeCoronaryVessel (S: THREE.Scene, side: number) {
+function makeCoronaryVessel (group: THREE.Group, side: number) {
   const mat = new THREE.MeshBasicMaterial({
     color: 0xff1a3a,
     transparent: true,
@@ -328,12 +328,12 @@ function makeCoronaryVessel (S: THREE.Scene, side: number) {
   const curve = new THREE.CatmullRomCurve3(pts)
   const geo = new THREE.TubeGeometry(curve, 80, 0.06 + Math.random() * 0.04, 6, false)
   const m = new THREE.Mesh(geo, mat)
-  S.add(m)
+  group.add(m)
   return m
 }
 
 /** Glowing inner ring light band — mimics the Purkinje network flash */
-function makePurkinjeRing (S: THREE.Scene, z: number) {
+function makePurkinjeRing (group: THREE.Group, z: number) {
   const mat = new THREE.MeshBasicMaterial({
     color: 0xff4466,
     transparent: true,
@@ -343,7 +343,7 @@ function makePurkinjeRing (S: THREE.Scene, z: number) {
   const m = new THREE.Mesh(geo, mat)
   m.rotation.x = Math.PI * 0.5
   m.position.set(0, 2, z)
-  S.add(m)
+  group.add(m)
   return m
 }
 
@@ -370,6 +370,9 @@ export interface HeartWorld extends World {
 }
 
 export function createHeartWorld (S: THREE.Scene): HeartWorld {
+  const group = new THREE.Group()
+  S.add(group)
+
   // ── Tunnel — irregular cardiac chamber interior ──────────────────────────
   const tg = new THREE.CylinderGeometry(8.8, 8.8, 220, 36, 32, true)
   tg.rotateX(Math.PI / 2)
@@ -403,7 +406,7 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
     })
   )
   tunnel.position.set(0, 2, -90)
-  S.add(tunnel)
+  group.add(tunnel)
 
   // ── Blood pool floor — wet, reflective, dark red ─────────────────────────
   const floorTex = bloodFloorTexture()
@@ -422,14 +425,14 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
   )
   floor.rotation.x = -Math.PI / 2
   floor.position.set(0, 0, -90)
-  S.add(floor)
+  group.add(floor)
 
   // ── Lane edges — pulsing red neon ────────────────────────────────────────
   const edgeM = new THREE.MeshBasicMaterial({ color: 0xff1a3a })
   ;[-3.5, 3.5].forEach(x => {
     const e = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 220), edgeM)
     e.position.set(x, 0.04, -90)
-    S.add(e)
+    group.add(e)
   })
 
   // ── Lane dashes — deep red ───────────────────────────────────────────────
@@ -440,7 +443,7 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
     for (let i = 0; i < 24; i++) {
       const d = new THREE.Mesh(dg, dm)
       d.position.set(x, 0.02, -i * 7)
-      S.add(d)
+      group.add(d)
       dashes.push(d)
     }
   })
@@ -448,7 +451,7 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
   // ── Trabeculae carnae — muscular ridges on the chamber wall ──────────────
   const trabeculae: THREE.Mesh[] = []
   for (let i = 0; i < 32; i++) {
-    trabeculae.push(makeTrabecula(S, -Math.random() * 200))
+    trabeculae.push(makeTrabecula(group, -Math.random() * 200))
   }
 
   // ── Chordae tendineae — tendon strings from valves ───────────────────────
@@ -457,7 +460,7 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
   for (let z = -20; z > -200; z -= 25) {
     const count = 2 + (Math.random() * 3 | 0)
     for (let c = 0; c < count; c++) {
-      chordae.push(makeChorda(S, z + (Math.random() - 0.5) * 8))
+      chordae.push(makeChorda(group, z + (Math.random() - 0.5) * 8))
     }
   }
 
@@ -466,28 +469,28 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
   const valvePositions = [-15, -55, -100, -145, -185]
   for (const z of valvePositions) {
     for (let a = 0; a < 3; a++) {
-      valveLeaflets.push(makeValveLeaflet(S, z, (a / 3) * Math.PI * 2))
+      valveLeaflets.push(makeValveLeaflet(group, z, (a / 3) * Math.PI * 2))
     }
   }
 
   // ── Papillary muscles — conical stumps rising from the floor ─────────────
   const papillaryMuscles: THREE.Mesh[] = []
   for (let z = -10; z > -210; z -= 18) {
-    papillaryMuscles.push(makePapillaryMuscle(S, z + Math.random() * 6))
+    papillaryMuscles.push(makePapillaryMuscle(group, z + Math.random() * 6))
     if (Math.random() < 0.5)
-      papillaryMuscles.push(makePapillaryMuscle(S, z - 4))
+      papillaryMuscles.push(makePapillaryMuscle(group, z - 4))
   }
 
   // ── Coronary vessels — glowing tubes along the outer wall ────────────────
   const coronaryVessels: THREE.Mesh[] = []
   for (let s = 0; s < 4; s++) {
-    coronaryVessels.push(makeCoronaryVessel(S, s))
+    coronaryVessels.push(makeCoronaryVessel(group, s))
   }
 
   // ── Purkinje rings — electrical conduction glows ─────────────────────────
   const purkinjeRings: THREE.Mesh[] = []
   for (let z = -10; z > -210; z -= 30) {
-    purkinjeRings.push(makePurkinjeRing(S, z))
+    purkinjeRings.push(makePurkinjeRing(group, z))
   }
 
   // ── Red blood cells (rbcs array) — biconcave disc shapes ─────────────────
@@ -503,7 +506,7 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
     const m = new THREE.Mesh(rbcGeo, rbcMat)
     m.scale.z = 0.4   // flatten into biconcave disc
     placeHeartParticle(m, -Math.random() * 130)
-    S.add(m)
+    group.add(m)
     rbcs.push(m)
   }
 
@@ -516,17 +519,16 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
     pa[i * 3 + 2] = -Math.random() * 130
   }
   points.setAttribute('position', new THREE.BufferAttribute(pa, 3))
-  S.add(
-    new THREE.Points(
-      points,
-      new THREE.PointsMaterial({
-        color: 0xff3355,
-        size: 0.11,
-        transparent: true,
-        opacity: 0.7
-      })
-    )
+  const pointsMesh = new THREE.Points(
+    points,
+    new THREE.PointsMaterial({
+      color: 0xff3355,
+      size: 0.11,
+      transparent: true,
+      opacity: 0.7
+    })
   )
+  group.add(pointsMesh)
 
   // ── Idle platform — glowing red ring ─────────────────────────────────────
   const plat = new THREE.Group()
@@ -546,12 +548,30 @@ export function createHeartWorld (S: THREE.Scene): HeartWorld {
   )
   plat.rotation.x = -Math.PI / 2
   plat.position.y = 0.06
-  S.add(plat)
+  group.add(plat)
+
+  const dispose = () => {
+    S.remove(group)
+    group.traverse(obj => {
+      if (obj instanceof THREE.Mesh || obj instanceof THREE.Points) {
+        obj.geometry?.dispose()
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose())
+        } else if (obj.material) {
+          obj.material.dispose()
+        }
+      }
+    })
+    tex.dispose()
+    floorTex.dispose()
+  }
 
   return {
+    group,
     tunnel, tex, dashes, rbcs, points, pa, plat,
     trabeculae, chordae, valveLeaflets, papillaryMuscles,
     coronaryVessels, purkinjeRings,
-    phase: 0
+    phase: 0,
+    dispose
   }
 }
