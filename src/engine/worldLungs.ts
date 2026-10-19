@@ -1,7 +1,72 @@
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { World } from './world'
 
 export const LUNGS_POINT_COUNT = 350
+
+// ── GLB ring model loader (cached) ─────────────────────────────────────────
+// The GLB replaces the procedural bluish ring meshes that used to line the
+// left/right walls and the ceiling arches of the airway tunnel.
+let ringModel: THREE.Group | null = null
+let ringModelPromise: Promise<THREE.Group> | null = null
+
+export function loadTunnelRingModel (
+  url = `${import.meta.env.BASE_URL}models/tunnel-ring.glb`
+): Promise<THREE.Group> {
+  if (ringModelPromise) return ringModelPromise
+  ringModelPromise = new Promise<THREE.Group>((resolve, reject) => {
+    new GLTFLoader().load(
+      url,
+      g => {
+        const model = g.scene
+        // Normalise the model so its largest dimension is ~6 units.
+        // Arch rings use this size directly; side-wall branch ports are scaled
+        // down further by BRANCH_SCALE inside swapToGlbRings.
+        const box = new THREE.Box3().setFromObject(model)
+        const size = box.getSize(new THREE.Vector3())
+        const maxSize = Math.max(size.x, size.y, size.z, 0.001)
+        const TARGET_SIZE = 14
+        model.scale.multiplyScalar(TARGET_SIZE / maxSize)
+        // Self-light the materials so the model glows in the dark navy airway,
+        // the same way the original emissive rings did.
+        model.traverse(n => {
+          const m = n as THREE.Mesh
+          if (!m.isMesh) return
+          const mats = Array.isArray(m.material) ? m.material : [m.material]
+          mats.forEach(mat => {
+            const sm = mat as THREE.MeshStandardMaterial
+            if (sm.isMeshStandardMaterial) {
+              sm.emissive = new THREE.Color(0x003366)
+              sm.emissiveIntensity = 0.55
+              sm.metalness = Math.min(sm.metalness, 0.2)
+              sm.roughness = Math.max(sm.roughness, 0.5)
+              sm.needsUpdate = true
+            }
+          })
+        })
+        ringModel = model
+        resolve(model)
+      },
+      undefined,
+      reject
+    )
+  })
+  return ringModelPromise
+}
+
+/** Deep-clone a ring model with per-instance materials so each one can pulse
+ *  on its own phase. */
+function cloneRing (src: THREE.Group): THREE.Group {
+  const c = src.clone(true)
+  c.traverse(n => {
+    const m = n as THREE.Mesh
+    if (!m.isMesh) return
+    const list = Array.isArray(m.material) ? m.material : [m.material]
+    const cloned = list.map(mat => mat.clone())
+    m.material = Array.isArray(m.material) ? cloned : cloned[0]
+  })
+  return c
+}
 
 /** Blue-teal bronchial airway texture */
 function lungsTexture () {
@@ -89,8 +154,8 @@ export function placeLungsParticle (m: THREE.Mesh, z: number) {
   m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3)
 }
 
-/** C-shaped tracheal/bronchial cartilage ring arching over ceiling and side walls */
-function makeCartilageRing (group: THREE.Group, z: number) {
+/** Fallback C-shaped cartilage ring (used only if tunnel-ring.glb fails to load). */
+function makeCartilageRing (group: THREE.Group, z: number): THREE.Mesh {
   const mat = new THREE.MeshStandardMaterial({
     color: 0x80d0ff,
     emissive: 0x003366,
@@ -110,8 +175,8 @@ function makeCartilageRing (group: THREE.Group, z: number) {
   return m
 }
 
-/** Branching bronchiole junction port along the airway walls */
-function makeBranchingPort (group: THREE.Group, z: number, side: number) {
+/** Fallback branching bronchiole port (used only if tunnel-ring.glb fails to load). */
+function makeBranchingPort (group: THREE.Group, z: number, side: number): THREE.Mesh {
   const mat = new THREE.MeshStandardMaterial({
     color: 0x006699,
     emissive: 0x002244,
@@ -128,8 +193,8 @@ function makeBranchingPort (group: THREE.Group, z: number, side: number) {
 }
 
 export interface LungsWorld extends World {
-  cartilageRings: THREE.Mesh[]
-  branchingPorts: THREE.Mesh[]
+  cartilageRings: THREE.Object3D[]
+  branchingPorts: THREE.Object3D[]
   phase: number
 }
 
@@ -198,17 +263,92 @@ export function createLungsWorld (S: THREE.Scene): LungsWorld {
     }
   })
 
-  // ── C-shaped Cartilage Rings (trachea/bronchi arches) ─────────────────────
-  const cartilageRings: THREE.Mesh[] = []
-  for (let z = -8; z > -210; z -= 14) {
-    cartilageRings.push(makeCartilageRing(group, z))
+  // ── C-shaped Cartilage Rings / GLB tunnel rings ────────────────────────────
+  // If tunnel-ring.glb is already cached, swap in GLB copies immediately.
+  // Otherwise fall back to the procedural Torus rings and silently upgrade when
+  // the model arrives.
+  const cartilageRings: THREE.Object3D[] = []
+  const cartilageZ: number[] = []
+  for (let z = -8; z > -210; z -= 14) cartilageZ.push(z)
+
+  const branchingPorts: THREE.Object3D[] = []
+  const branchPortZ: Array<{ z: number; side: number }> = []
+  for (let z = -20; z > -200; z -= 28) {
+    branchPortZ.push({ z, side: -1 })
+    branchPortZ.push({ z: z - 8, side: 1 })
   }
 
-  // ── Bronchial branch ports along walls ───────────────────────────────────
-  const branchingPorts: THREE.Mesh[] = []
-  for (let z = -20; z > -200; z -= 28) {
-    branchingPorts.push(makeBranchingPort(group, z, -1))
-    branchingPorts.push(makeBranchingPort(group, z - 8, 1))
+  /** Replace existing fallback meshes (or add fresh GLB rings) once the model loads. */
+  function swapToGlbRings (src: THREE.Group) {
+    // Remove current entries from scene
+    cartilageRings.forEach(r => group.remove(r))
+    cartilageRings.length = 0
+    branchingPorts.forEach(p => group.remove(p))
+    branchingPorts.length = 0
+
+    // ── Wall-mounted GLB rings ─────────────────────────────────────────────
+    // Both sets go on the LEFT and RIGHT tunnel walls only.
+    // The running lane occupies x∈[-3.5, 3.5], y∈[0, ~2.5], so we push the
+    // models deep into the wall (x ≈ ±8.5) and high enough (y ≈ 4.5–6.5)
+    // that they are fully clear of the player corridor.
+    //
+    // WALL_SCALE  – multiplier on the base 14-unit model
+    // WALL_X      – how far left/right into the tunnel wall to embed them
+    // WALL_Y      – height band along the wall (randomised per ring)
+    const WALL_SCALE = 1.0   // 14 units — large, clearly visible on the walls
+    const WALL_X     = 8.5   // near the inner surface of the 9.5-radius tunnel
+    const WALL_Y_MIN = 3.5   // bottom of the wall band (above the lane)
+    const WALL_Y_MAX = 7.0   // top of the wall band
+
+    // Cartilage ring Z positions → left + right wall pairs
+    cartilageZ.forEach(z => {
+      ;[-1, 1].forEach(side => {
+        const ring = cloneRing(src)
+        ring.scale.multiplyScalar(WALL_SCALE)
+        const x = side * WALL_X
+        const y = WALL_Y_MIN + Math.random() * (WALL_Y_MAX - WALL_Y_MIN)
+        ring.position.set(x, y, z)
+        // Face the ring inward (toward the centre of the tunnel)
+        ring.rotation.y = side * Math.PI * 0.5
+        group.add(ring)
+        cartilageRings.push(ring)
+      })
+    })
+
+    // Branch port rings at their own Z positions → also wall-mounted
+    branchPortZ.forEach(({ z, side }) => {
+      const ring = cloneRing(src)
+      ring.scale.multiplyScalar(WALL_SCALE * 0.85)  // slightly smaller accent
+      const x = side * WALL_X
+      const y = WALL_Y_MIN + Math.random() * (WALL_Y_MAX - WALL_Y_MIN)
+      ring.position.set(x, y, z)
+      ring.rotation.y = side * Math.PI * 0.5
+      group.add(ring)
+      branchingPorts.push(ring)
+    })
+  }
+
+  if (ringModel) {
+    // GLB already loaded (cached from a previous world switch)
+    swapToGlbRings(ringModel)
+  } else {
+    // Spawn procedural fallback rings on the walls while the GLB loads
+    cartilageZ.forEach(z => {
+      ;[-1, 1].forEach(side => {
+        const m = makeBranchingPort(group, z, side)
+        cartilageRings.push(m)
+      })
+    })
+    branchPortZ.forEach(({ z, side }) => {
+      const m = makeBranchingPort(group, z, side)
+      branchingPorts.push(m)
+    })
+    // Kick off async load and upgrade silently when ready
+    loadTunnelRingModel().then(src => {
+      swapToGlbRings(src)
+    }).catch(() => {
+      // GLB failed – keep the procedural fallback rings, nothing to do
+    })
   }
 
   // ── Alveolar sacs — translucent clusters along the periphery ─────────────

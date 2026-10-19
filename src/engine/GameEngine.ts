@@ -690,8 +690,21 @@ export class GameEngine {
 
       // Cartilage rings scroll and have a faint blue sheen
       lw.cartilageRings?.forEach((r, i) => {
-        const mat = r.material as THREE.MeshStandardMaterial
-        mat.emissiveIntensity = 0.4 + Math.sin(lw.phase * 2 + i * 0.3) * 0.25
+        const pulse = 0.4 + Math.sin(lw.phase * 2 + i * 0.3) * 0.25
+        // GLB clones are Groups; procedural fallbacks are Meshes — traverse covers both
+        r.traverse(o => {
+          const mesh = o as THREE.Mesh
+          if (!mesh.isMesh) return
+          const mats = Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material]
+          mats.forEach(mat => {
+            const sm = mat as THREE.MeshStandardMaterial
+            if (sm.isMeshStandardMaterial && sm.emissive) {
+              sm.emissiveIntensity = pulse
+            }
+          })
+        })
         r.position.z += dz
         if (r.position.z > 8) r.position.z -= 220
       })
