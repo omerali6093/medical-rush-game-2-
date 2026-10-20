@@ -30,232 +30,202 @@ function seededRng (seed: number) {
   }
 }
 
-// ─── Albedo: rich biological tissue with capillary networks ─────────────────
-function buildAlbedoMap (W = 1024, H = 1024): THREE.CanvasTexture {
+// ─── Albedo: arterial wall — smooth base with readable tissue detail ─────────
+function buildAlbedoMap (W = 512, H = 512): THREE.CanvasTexture {
   const c = document.createElement('canvas')
   c.width = W; c.height = H
   const g = c.getContext('2d')!
   const rng = seededRng(42)
 
-  // Base — mid arterial red, bright enough to show detail under scene lighting
-  const base = g.createLinearGradient(0, 0, W, H)
-  base.addColorStop(0.0, '#8a1520')
-  base.addColorStop(0.3, '#b02030')
-  base.addColorStop(0.6, '#c42838')
-  base.addColorStop(1.0, '#961a26')
+  // ── Base gradient — warm arterial red, richer at centre ──────────────────
+  const base = g.createLinearGradient(0, 0, 0, H)
+  base.addColorStop(0.0, '#9e1a28')
+  base.addColorStop(0.4, '#c02535')
+  base.addColorStop(0.7, '#b02030')
+  base.addColorStop(1.0, '#8a1520')
   g.fillStyle = base
   g.fillRect(0, 0, W, H)
 
-  // Large vessel fibres — longitudinal smooth-muscle bands
-  for (let i = 0; i < 18; i++) {
-    const x = rng() * W
-    const grad = g.createLinearGradient(x - 12, 0, x + 12, 0)
-    grad.addColorStop(0, 'rgba(0,0,0,0)')
-    grad.addColorStop(0.5, `rgba(${Math.floor(100 + rng()*60)},${Math.floor(rng()*18)},${Math.floor(rng()*18)},${0.3 + rng()*0.25})`)
-    grad.addColorStop(1, 'rgba(0,0,0,0)')
+  // ── Smooth-muscle longitudinal bands — 10 soft vertical streaks ──────────
+  // These mimic the tunica media layer visible in real vessel cross-sections.
+  for (let i = 0; i < 10; i++) {
+    const x = (i / 10) * W + rng() * (W / 12)
+    const bw = 18 + rng() * 28
+    const bright = rng() > 0.5   // alternate light/dark bands
+    const col = bright
+      ? `rgba(200,55,65,${0.18 + rng()*0.14})`
+      : `rgba(60,0,5,${0.14 + rng()*0.12})`
+    const grad = g.createLinearGradient(x - bw, 0, x + bw, 0)
+    grad.addColorStop(0,   'rgba(0,0,0,0)')
+    grad.addColorStop(0.5, col)
+    grad.addColorStop(1,   'rgba(0,0,0,0)')
     g.fillStyle = grad
-    g.fillRect(x - 12, 0, 24, H)
+    g.fillRect(x - bw, 0, bw * 2, H)
   }
 
-  // Capillary network — thin branching lines, brighter red
-  for (let i = 0; i < 120; i++) {
+  // ── Capillary network — 40 branching threads, visible but not harsh ───────
+  for (let i = 0; i < 40; i++) {
     let cx = rng() * W, cy = rng() * H
-    const segments = 4 + Math.floor(rng() * 8)
-    const alpha = 0.3 + rng() * 0.5
-    const r = Math.floor(210 + rng() * 45)
-    const gr = Math.floor(20 + rng() * 30)
-    g.strokeStyle = `rgba(${r},${gr},${Math.floor(rng()*15)},${alpha})`
-    g.lineWidth = 0.5 + rng() * 1.8
-    g.beginPath()
-    g.moveTo(cx, cy)
-    for (let s = 0; s < segments; s++) {
-      cx += (rng() - 0.5) * 60
-      cy += (rng() - 0.5) * 60
+    const alpha = 0.18 + rng() * 0.22   // 0.18–0.40: visible yet soft
+    const bright = Math.floor(200 + rng() * 50)
+    g.strokeStyle = `rgba(${bright},${Math.floor(30+rng()*25)},${Math.floor(25+rng()*20)},${alpha})`
+    g.lineWidth = 0.8 + rng() * 1.4
+    g.beginPath(); g.moveTo(cx, cy)
+    for (let s = 0; s < 4; s++) {
+      cx += (rng() - 0.5) * 55; cy += (rng() - 0.5) * 55
       g.lineTo(cx, cy)
     }
     g.stroke()
   }
 
-  // Wet membrane highlight patches — brighter warm-red subsurface scatter
-  for (let i = 0; i < 80; i++) {
+  // ── Wet membrane patches — 30 soft elliptical highlights ─────────────────
+  // Low opacity so they add sheen without forming visible blobs.
+  for (let i = 0; i < 30; i++) {
     const x = rng() * W, y = rng() * H
-    const rx = 8 + rng() * 55, ry = 5 + rng() * 35
+    const rx = 12 + rng() * 40, ry = 8 + rng() * 28
     const gr = g.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry))
-    gr.addColorStop(0, `rgba(240,60,70,${0.15 + rng()*0.2})`)
-    gr.addColorStop(0.6, `rgba(180,20,30,${0.08 + rng()*0.1})`)
-    gr.addColorStop(1, 'rgba(0,0,0,0)')
+    gr.addColorStop(0,   `rgba(220,55,65,${0.10 + rng()*0.12})`)
+    gr.addColorStop(1,   'rgba(0,0,0,0)')
     g.fillStyle = gr
-    g.save()
-    g.translate(x, y)
+    g.save(); g.translate(x, y)
     g.scale(rx / Math.max(rx, ry), ry / Math.max(rx, ry))
-    g.beginPath()
-    g.arc(0, 0, Math.max(rx, ry), 0, Math.PI * 2)
-    g.fill()
-    g.restore()
+    g.beginPath(); g.arc(0, 0, Math.max(rx, ry), 0, Math.PI * 2)
+    g.fill(); g.restore()
   }
 
-  // Fibrous connective tissue strands — lighter so they show
-  for (let i = 0; i < 200; i++) {
-    const x = rng() * W, y = rng() * H
-    const len = 15 + rng() * 80
-    const angle = rng() * Math.PI
-    const dx = Math.cos(angle) * len, dy = Math.sin(angle) * len
-    g.strokeStyle = `rgba(${Math.floor(140+rng()*80)},${Math.floor(10+rng()*20)},${Math.floor(rng()*18)},${0.2+rng()*0.3})`
-    g.lineWidth = 0.3 + rng() * 0.9
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + dx, y + dy); g.stroke()
-  }
-
-  // Soft venous shadow pools — lighter opacity so they don't crush the image
-  for (let i = 0; i < 20; i++) {
-    const x = rng() * W, y = rng() * H, r = 20 + rng() * 90
+  // ── Gentle shadow grooves — 8 soft dark pools for depth ──────────────────
+  for (let i = 0; i < 8; i++) {
+    const x = rng() * W, y = rng() * H, r = 30 + rng() * 70
     const gr = g.createRadialGradient(x, y, 0, x, y, r)
-    gr.addColorStop(0, `rgba(0,0,0,${0.12 + rng()*0.15})`)
+    gr.addColorStop(0, `rgba(0,0,0,${0.10 + rng()*0.12})`)
     gr.addColorStop(1, 'rgba(0,0,0,0)')
-    g.fillStyle = gr
-    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill()
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill()
   }
 
   const t = new THREE.CanvasTexture(c)
   t.wrapS = t.wrapT = THREE.RepeatWrapping
-  t.repeat.set(3, 22)
+  t.repeat.set(2, 10)    // 10× vertical keeps detail visible without chaos
   t.anisotropy = 16
   return t
 }
 
-// ─── Normal map: vein ridges + muscle fibre bumps ───────────────────────────
-function buildNormalMap (W = 512, H = 512): THREE.CanvasTexture {
+// ─── Normal map: ring bumps + light vertical ridges ─────────────────────────
+function buildNormalMap (W = 256, H = 256): THREE.CanvasTexture {
   const c = document.createElement('canvas')
   c.width = W; c.height = H
   const g = c.getContext('2d')!
   const rng = seededRng(77)
 
-  // Flat normal baseline: RGB(128,128,255) = pointing straight out
+  // Flat baseline
   g.fillStyle = 'rgb(128,128,255)'
   g.fillRect(0, 0, W, H)
 
-  // Longitudinal vein ridges — raise the normal toward +X or -X
-  for (let i = 0; i < 14; i++) {
-    const x = rng() * W
-    const w = 4 + rng() * 18
-    // Left slope of ridge: normal tilts left (R < 128)
-    const gleft = g.createLinearGradient(x - w, 0, x, 0)
-    gleft.addColorStop(0, 'rgba(128,128,0,0)')
-    gleft.addColorStop(1, `rgba(${Math.floor(60+rng()*40)},128,0,0.7)`)
-    g.fillStyle = gleft; g.fillRect(x - w, 0, w, H)
-    // Right slope: normal tilts right (R > 128)
-    const gright = g.createLinearGradient(x, 0, x + w, 0)
-    gright.addColorStop(0, `rgba(${Math.floor(180+rng()*50)},128,0,0.7)`)
-    gright.addColorStop(1, 'rgba(128,128,0,0)')
-    g.fillStyle = gright; g.fillRect(x, 0, w, H)
-  }
-
-  // Horizontal muscle ring bumps
-  for (let i = 0; i < 22; i++) {
+  // Horizontal ring-like bumps — 12, moderate strength
+  for (let i = 0; i < 12; i++) {
     const y = rng() * H
-    const h = 3 + rng() * 10
-    const gtop = g.createLinearGradient(0, y - h, 0, y)
-    gtop.addColorStop(0, 'rgba(128,128,0,0)')
-    gtop.addColorStop(1, `rgba(128,${Math.floor(60+rng()*40)},0,0.5)`)
-    g.fillStyle = gtop; g.fillRect(0, y - h, W, h)
-    const gbot = g.createLinearGradient(0, y, 0, y + h)
-    gbot.addColorStop(0, `rgba(128,${Math.floor(180+rng()*50)},0,0.5)`)
-    gbot.addColorStop(1, 'rgba(128,128,0,0)')
-    g.fillStyle = gbot; g.fillRect(0, y, W, h)
+    const h = 5 + rng() * 12
+    const up   = g.createLinearGradient(0, y - h, 0, y)
+    up.addColorStop(0, 'rgba(128,128,0,0)')
+    up.addColorStop(1, `rgba(128,${Math.floor(75+rng()*35)},0,0.4)`)
+    g.fillStyle = up; g.fillRect(0, y - h, W, h)
+    const dn   = g.createLinearGradient(0, y, 0, y + h)
+    dn.addColorStop(0, `rgba(128,${Math.floor(158+rng()*35)},0,0.4)`)
+    dn.addColorStop(1, 'rgba(128,128,0,0)')
+    g.fillStyle = dn; g.fillRect(0, y, W, h)
   }
 
-  // Fine noise pores / micro-bumps
-  for (let i = 0; i < 600; i++) {
-    const x = rng() * W, y = rng() * H, r = 1 + rng() * 5
-    const rVal = Math.floor(90 + rng() * 80)
-    const gVal = Math.floor(90 + rng() * 80)
-    const gr = g.createRadialGradient(x, y, 0, x, y, r)
-    gr.addColorStop(0, `rgba(${rVal},${gVal},200,0.6)`)
-    gr.addColorStop(1, 'rgba(128,128,255,0)')
-    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill()
+  // Vertical vessel ridges — 6, gentle
+  for (let i = 0; i < 6; i++) {
+    const x = rng() * W, w = 5 + rng() * 14
+    const left  = g.createLinearGradient(x - w, 0, x, 0)
+    left.addColorStop(0, 'rgba(128,128,0,0)')
+    left.addColorStop(1, `rgba(${Math.floor(88+rng()*30)},128,0,0.35)`)
+    g.fillStyle = left; g.fillRect(x - w, 0, w, H)
+    const right = g.createLinearGradient(x, 0, x + w, 0)
+    right.addColorStop(0, `rgba(${Math.floor(165+rng()*30)},128,0,0.35)`)
+    right.addColorStop(1, 'rgba(128,128,0,0)')
+    g.fillStyle = right; g.fillRect(x, 0, w, H)
   }
 
   const t = new THREE.CanvasTexture(c)
   t.wrapS = t.wrapT = THREE.RepeatWrapping
-  t.repeat.set(3, 22)
-  t.anisotropy = 8
+  t.repeat.set(2, 10)
+  t.anisotropy = 4
   return t
 }
 
-// ─── Roughness map: wet gloss (dark=smooth) vs dry fibre (light=rough) ──────
-function buildRoughnessMap (W = 512, H = 512): THREE.CanvasTexture {
+// ─── Roughness map: wet glossy spots + subtle dry ridges ─────────────────────
+function buildRoughnessMap (W = 256, H = 256): THREE.CanvasTexture {
   const c = document.createElement('canvas')
   c.width = W; c.height = H
   const g = c.getContext('2d')!
   const rng = seededRng(13)
 
-  // Base: medium-high roughness tissue
-  g.fillStyle = 'rgb(160,160,160)'
+  // Medium base roughness
+  g.fillStyle = 'rgb(145,145,145)'
   g.fillRect(0, 0, W, H)
 
-  // Wet plasma pools — very smooth (dark)
-  for (let i = 0; i < 60; i++) {
-    const x = rng() * W, y = rng() * H, r = 10 + rng() * 60
+  // Wet plasma patches — smooth (dark = low roughness)
+  for (let i = 0; i < 22; i++) {
+    const x = rng() * W, y = rng() * H, r = 12 + rng() * 45
     const gr = g.createRadialGradient(x, y, 0, x, y, r)
-    gr.addColorStop(0, `rgba(20,20,20,${0.5 + rng()*0.4})`)
+    gr.addColorStop(0, `rgba(30,30,30,${0.35 + rng()*0.3})`)
     gr.addColorStop(1, 'rgba(0,0,0,0)')
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill()
   }
 
-  // Dry fibrous ridges — rough (light)
-  for (let i = 0; i < 20; i++) {
-    const x = rng() * W, w = 2 + rng() * 8
+  // Dry fibrous ridges — rough (light = high roughness)
+  for (let i = 0; i < 8; i++) {
+    const x = rng() * W, w = 3 + rng() * 10
     const gr = g.createLinearGradient(x, 0, x + w, 0)
-    gr.addColorStop(0, 'rgba(0,0,0,0)')
-    gr.addColorStop(0.5, `rgba(210,210,210,${0.4+rng()*0.4})`)
-    gr.addColorStop(1, 'rgba(0,0,0,0)')
+    gr.addColorStop(0,   'rgba(0,0,0,0)')
+    gr.addColorStop(0.5, `rgba(195,195,195,${0.3 + rng()*0.3})`)
+    gr.addColorStop(1,   'rgba(0,0,0,0)')
     g.fillStyle = gr; g.fillRect(x, 0, w, H)
   }
 
   const t = new THREE.CanvasTexture(c)
   t.wrapS = t.wrapT = THREE.RepeatWrapping
-  t.repeat.set(3, 22)
+  t.repeat.set(2, 10)
   return t
 }
 
-// ─── Emissive map: glowing hot capillaries pulsing from within ───────────────
-function buildEmissiveMap (W = 512, H = 512): THREE.CanvasTexture {
+// ─── Emissive map: glowing capillaries — atmospheric glow, not overwhelming ──
+function buildEmissiveMap (W = 256, H = 256): THREE.CanvasTexture {
   const c = document.createElement('canvas')
   c.width = W; c.height = H
   const g = c.getContext('2d')!
   const rng = seededRng(99)
 
-  // Black base — no emission except capillaries
   g.fillStyle = 'rgb(0,0,0)'
   g.fillRect(0, 0, W, H)
 
-  // Glowing capillary threads
-  for (let i = 0; i < 60; i++) {
+  // Glowing capillary threads — 28, moderate opacity
+  for (let i = 0; i < 28; i++) {
     let cx = rng() * W, cy = rng() * H
-    const segments = 5 + Math.floor(rng() * 10)
-    const r = Math.floor(180 + rng() * 75)
-    const alpha = 0.3 + rng() * 0.5
-    g.strokeStyle = `rgba(${r},${Math.floor(rng()*30)},${Math.floor(rng()*20)},${alpha})`
-    g.lineWidth = 0.5 + rng() * 2.5
+    const alpha = 0.20 + rng() * 0.28
+    g.strokeStyle = `rgba(215,25,35,${alpha})`
+    g.lineWidth = 1 + rng() * 2.2
     g.beginPath(); g.moveTo(cx, cy)
-    for (let s = 0; s < segments; s++) {
-      cx += (rng() - 0.5) * 50; cy += (rng() - 0.5) * 50
+    for (let s = 0; s < 4; s++) {
+      cx += (rng() - 0.5) * 45; cy += (rng() - 0.5) * 45
       g.lineTo(cx, cy)
     }
     g.stroke()
   }
 
-  // Hot-spot glow nodes at capillary junctions
-  for (let i = 0; i < 40; i++) {
-    const x = rng() * W, y = rng() * H, r = 3 + rng() * 18
+  // Warm junction nodes — 18, soft radius
+  for (let i = 0; i < 18; i++) {
+    const x = rng() * W, y = rng() * H, r = 4 + rng() * 16
     const gr = g.createRadialGradient(x, y, 0, x, y, r)
-    gr.addColorStop(0, `rgba(255,${Math.floor(rng()*60)},0,${0.4+rng()*0.4})`)
+    gr.addColorStop(0, `rgba(210,20,30,${0.22 + rng()*0.20})`)
     gr.addColorStop(1, 'rgba(0,0,0,0)')
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill()
   }
 
   const t = new THREE.CanvasTexture(c)
   t.wrapS = t.wrapT = THREE.RepeatWrapping
-  t.repeat.set(3, 22)
+  t.repeat.set(2, 10)
   return t
 }
 
@@ -296,7 +266,7 @@ export function createWorld (S: THREE.Scene): World {
     new THREE.MeshStandardMaterial({
       map:               tex,
       normalMap:         normalMap,
-      normalScale:       new THREE.Vector2(1.1, 1.1),
+      normalScale:       new THREE.Vector2(0.8, 0.8),
       roughnessMap:      roughMap,
       roughness:         0.65,
       metalness:         0.04,
