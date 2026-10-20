@@ -35,7 +35,7 @@ const glbCache: Record<'virus' | 'bact', GlbEntry> = {
 
 /** Target bounding-box sizes in game units — visible, not tiny. */
 const TARGET: Record<'virus' | 'bact', number> = {
-  virus: 1.8,   // big enough to clearly see in the tunnel (old wireframe was ~1.7 diam)
+  virus: 1.1,   // compact — visible but not oversized
   bact:  1.6    // bacteria capsule — visible at speed
 }
 

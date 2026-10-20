@@ -26,5 +26,18 @@
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "^5.5.4",
     "vite": "^8.3.3"
-  }
+  },
+  "description": "Frontend: React + Typescript, Vite, Three.js, Framer Motion, Custom CSS Backend: Nodejs & Express, Typescript, Mongodb. Login & Security: Bcrypt, Jsonwebtoke, helmet, Express-rate-limit, zod, dotenv",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omerali6093/medical-rush-game-2-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/omerali6093/medical-rush-game-2-/issues"
+  },
+  "homepage": "https://github.com/omerali6093/medical-rush-game-2-#readme"
 }
