@@ -29,9 +29,9 @@ const WORLD_CONFIG: Record<WorldId, {
   pulseColor: number; particleCount: number
 }> = {
   Bloodstream: {
-    bg: 0x1c0510, fog: 0x3a0a18, fogDensity: 0.018,
-    ambient: 0xffc0cc, hemiSky: 0xffb0c0, hemiGround: 0x442030,
-    trackLight: 0x22e4ff, fillLight: 0xffffff,
+    bg: 0x2a0810, fog: 0x4a1020, fogDensity: 0.012,
+    ambient: 0xff8899, hemiSky: 0xff6070, hemiGround: 0x661828,
+    trackLight: 0xff5566, fillLight: 0xffcccc,
     pulseColor: 0xff9ab5, particleCount: POINT_COUNT
   },
   Heart: {
@@ -154,10 +154,10 @@ export class GameEngine {
     pmrem.dispose()
 
     const wc = WORLD_CONFIG['Bloodstream']
-    this.light = new THREE.PointLight(wc.trackLight, 2.4 * BRIGHTNESS, 20)
-    this.fill  = new THREE.PointLight(wc.fillLight,  2.6 * BRIGHTNESS, 16)
-    this.ambLight = new THREE.AmbientLight(wc.ambient, 1.5 * BRIGHTNESS)
-    this.hemiLight = new THREE.HemisphereLight(wc.hemiSky, wc.hemiGround, 1.0 * BRIGHTNESS)
+    this.light = new THREE.PointLight(wc.trackLight, 3.5 * BRIGHTNESS, 22)
+    this.fill  = new THREE.PointLight(wc.fillLight,  3.8 * BRIGHTNESS, 18)
+    this.ambLight = new THREE.AmbientLight(wc.ambient, 2.2 * BRIGHTNESS)
+    this.hemiLight = new THREE.HemisphereLight(wc.hemiSky, wc.hemiGround, 1.6 * BRIGHTNESS)
 
     this.S.background = new THREE.Color(wc.bg)
     this.S.fog = new THREE.FogExp2(wc.fog, wc.fogDensity)
@@ -607,9 +607,9 @@ export class GameEngine {
     w.tunnel.rotation.z += dt * 0.02
     w.tex.offset.y -= (dz / 220) * 26
     const hb = Math.pow(Math.max(0, Math.sin(tm * 5.2)), 6)
-    ;(this.S.fog as THREE.FogExp2).density = wc.fogDensity + hb * 0.004
-    this.light.intensity = (2.4 + hb * 0.9) * BRIGHTNESS
-    w.tunnel.material.emissiveIntensity = 1.3 + hb * 1.3
+    ;(this.S.fog as THREE.FogExp2).density = wc.fogDensity + hb * 0.003
+    this.light.intensity = (3.5 + hb * 1.2) * BRIGHTNESS
+    w.tunnel.material.emissiveIntensity = 0.35 + hb * 0.5   // base 0.35, pulses to 0.85 on heartbeat
     if (this.mode === 'run') {
       if (hb > 0.9 && !this.hbOn) {
         this.hbOn = true

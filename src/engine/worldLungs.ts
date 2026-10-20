@@ -148,7 +148,7 @@ function safeLungsWallPoint (): { x: number; y: number } {
 }
 
 /** Place air bubbles / alveolar sacs safely outside the player corridor */
-export function placeLungsParticle (m: THREE.Mesh, z: number) {
+export function placeLungsParticle (m: THREE.Object3D, z: number) {
   const p = safeLungsWallPoint()
   m.position.set(p.x, p.y, z)
   m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3)

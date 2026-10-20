@@ -350,7 +350,7 @@ function makePurkinjeRing (group: THREE.Group, z: number) {
 // ─── Particle placement ───────────────────────────────────────────────────────
 
 /** Place a red blood cell (biconcave disc shape) in the streaming flow */
-export function placeHeartParticle (m: THREE.Mesh, z: number) {
+export function placeHeartParticle (m: THREE.Object3D, z: number) {
   const a = Math.random() * Math.PI * 2
   const r = 4.5 + Math.random() * 3.5
   m.position.set(Math.cos(a) * r, 1.5 + Math.sin(a) * r * 0.7, z)
