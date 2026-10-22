@@ -1,4 +1,4 @@
-import type { ACHIEVEMENTS } from '../../shared/rules'
+import type { ACHIEVEMENTS } from '../../../shared/rules'
 export type Role = 'player' | 'org_admin' | 'admin'
 export interface User {
   id: string

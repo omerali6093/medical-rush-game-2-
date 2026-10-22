@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import type { ResultState } from '../../hooks/useGameFlow'
 import type { Screen } from '../../types'
-import { ACHIEVEMENTS } from '../../../shared/rules'
+import { ACHIEVEMENTS } from '../../../../shared/rules'
 import { Btn, ITEM, Panel, STAGGER } from '../ui/motion'
 
 function useCountUp (target: number, ms = 900) {

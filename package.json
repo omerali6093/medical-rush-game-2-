@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "dev": "vite --config client/vite.config.ts --root client",
+    "build": "tsc -p client/tsconfig.json --noEmit && vite build --config client/vite.config.ts --root client",
+    "preview": "vite preview --config client/vite.config.ts --root client",
     "server:install": "npm --prefix server install",
     "server:dev": "npm --prefix server run dev",
     "server:test": "npm --prefix server test",

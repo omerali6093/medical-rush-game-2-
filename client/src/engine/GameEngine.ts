@@ -7,7 +7,7 @@ import {
   MissionMachine,
   type MissionRules,
   type RunSummary
-} from '../../shared/mission'
+} from '../../../shared/mission'
 import { makeBrandAssets, type BrandAssets } from './brand'
 import { ZONES, type WorldId } from '../data/worlds'
 import { createWorld, placeRbc, POINT_COUNT, type World } from './world'

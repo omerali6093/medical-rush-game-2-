@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import type { Screen } from '../../types'
 import type { WorldId } from '../../data/worlds'
 import { WORLDS } from '../../data/worlds'
-import { levelOfXp } from '../../../shared/rules'
+import { levelOfXp } from '../../../../shared/rules'
 
 export default function Worlds ({
   go,
