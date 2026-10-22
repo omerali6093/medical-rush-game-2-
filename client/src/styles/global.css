@@ -142,7 +142,7 @@ h2 {
 
 .row {
   display: flex;
-  gap: 0px;
+  gap: 15px;
   flex-wrap: wrap;
   justify-content: center;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useGameFlow } from './hooks/useGameFlow'
 import { useAuth } from './store/auth'
@@ -59,7 +59,6 @@ export default function App () {
   }
   const next = async (id: string) => g.openBriefing(await missionById(id))
 
-  if (loading) return <canvas ref={canvasRef} />
   return (
     <>
       <canvas ref={canvasRef} />
