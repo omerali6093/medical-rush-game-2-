@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite client --config client/vite.config.ts",
-    "build": "tsc --noEmit && vite build client --config client/vite.config.ts",
+    "build": "tsc -p client/tsconfig.json --noEmit && vite build client --config client/vite.config.ts",
     "preview": "vite preview client --config client/vite.config.ts",
     "server:install": "npm --prefix server install",
     "server:dev": "npm --prefix server run dev",
