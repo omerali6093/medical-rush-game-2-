@@ -1,4 +1,4 @@
-import type { MissionState } from '../shared/mission'
+import type { MissionState } from '../../shared/mission'
 export type Screen =
   | 'auth'
   | 'home'

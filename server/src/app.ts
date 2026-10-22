@@ -116,6 +116,8 @@ export function createApp () {
 
   // In production the API also serves the built React app (single deployable).
   const dist = [
+    path.resolve(__dirname, '../../client/dist'),
+    path.resolve(__dirname, '../../../../client/dist'),
     path.resolve(__dirname, '../../dist'),
     path.resolve(__dirname, '../../../../dist')
   ].find(d => fs.existsSync(path.join(d, 'index.html')))

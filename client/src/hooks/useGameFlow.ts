@@ -9,8 +9,8 @@ import type {
   ServerResult,
   SessionStart
 } from '../api/types'
-import type { RunSummary } from '../../shared/mission'
-import { SHOP } from '../../shared/rules'
+import type { RunSummary } from '../../../shared/mission'
+import { SHOP } from '../../../shared/rules'
 import { SKINS } from '../data/config'
 import { useProfile } from '../store/profile'
 import { useAuth } from '../store/auth'
