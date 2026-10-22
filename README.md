@@ -24,11 +24,12 @@ Tests: `npm run server:test` (22 tests; needs MongoDB at `mongodb://127.0.0.1:27
 
 ## Architecture
 ```
+client/        index.html, assets/, public/, src/, vite.config.ts (React + Vite frontend)
 shared/        rules.ts (score, stars, rewards, limits)   mission.ts (MissionMachine: timer, health, objective, quizzes, win/loss)
 server/src/    models/  routes/ (auth, player, play, compete, admin)  services/ (results, progress, quiz, ranking)  middleware/  seed.ts
-src/engine/    Three.js game (GameEngine delegates ALL mission logic to MissionMachine), world, doctor, entities, brand (sponsor coins)
-src/hooks/     useGameFlow: start session -> run -> quiz checkpoints -> submit -> server result
-src/components screens/ (Auth, Home, Worlds, Missions, Briefing, Dashboard, Leaderboard+Challenges, Profile, Admin, Results, Pause) game/ (Hud, MedicalEvent, Ecg)
+client/src/engine/    Three.js game (GameEngine delegates ALL mission logic to MissionMachine), world, doctor, entities, brand (sponsor coins)
+client/src/hooks/     useGameFlow: start session -> run -> quiz checkpoints -> submit -> server result
+client/src/components screens/ (Auth, Home, Worlds, Missions, Briefing, Dashboard, Leaderboard+Challenges, Profile, Admin, Results, Pause) game/ (Hud, MedicalEvent, Ecg)
 ```
 
 ## Game rules (published to players on the briefing screen)
